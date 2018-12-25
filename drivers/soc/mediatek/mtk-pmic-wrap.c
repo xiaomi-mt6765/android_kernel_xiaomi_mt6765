@@ -20,6 +20,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
+#include <linux/soc/mediatek/pmic_wrap.h>
 
 #define PWRAP_MT8135_BRIDGE_IORD_ARB_EN		0x4
 #define PWRAP_MT8135_BRIDGE_WACS3_EN		0x10
@@ -1067,7 +1068,7 @@ static const struct pmic_wrapper_type pwrap_mt2701 = {
 	.init_soc_specific = pwrap_mt2701_init_soc_specific,
 };
 
-static struct pmic_wrapper_type pwrap_mt8135 = {
+static const struct pmic_wrapper_type pwrap_mt8135 = {
 	.regs = mt8135_regs,
 	.type = PWRAP_MT8135,
 	.arb_en_all = 0x1ff,
@@ -1079,7 +1080,7 @@ static struct pmic_wrapper_type pwrap_mt8135 = {
 	.init_soc_specific = pwrap_mt8135_init_soc_specific,
 };
 
-static struct pmic_wrapper_type pwrap_mt8173 = {
+static const struct pmic_wrapper_type pwrap_mt8173 = {
 	.regs = mt8173_regs,
 	.type = PWRAP_MT8173,
 	.arb_en_all = 0x3f,
@@ -1091,7 +1092,7 @@ static struct pmic_wrapper_type pwrap_mt8173 = {
 	.init_soc_specific = pwrap_mt8173_init_soc_specific,
 };
 
-static struct of_device_id of_pwrap_match_tbl[] = {
+static const struct of_device_id of_pwrap_match_tbl[] = {
 	{
 		.compatible = "mediatek,mt2701-pwrap",
 		.data = &pwrap_mt2701,
@@ -1106,6 +1107,22 @@ static struct of_device_id of_pwrap_match_tbl[] = {
 	}
 };
 MODULE_DEVICE_TABLE(of, of_pwrap_match_tbl);
+
+struct regmap *pwrap_node_to_regmap(struct device_node *np)
+{
+	struct platform_device *pdev;
+	struct pmic_wrapper *wrp;
+
+	pdev = of_find_device_by_node(np);
+
+	if (!pdev)
+		return ERR_PTR(-ENODEV);
+
+	wrp = platform_get_drvdata(pdev);
+
+	return wrp->regmap;
+}
+EXPORT_SYMBOL_GPL(pwrap_node_to_regmap);
 
 static int pwrap_probe(struct platform_device *pdev)
 {

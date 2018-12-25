@@ -68,6 +68,8 @@ int fence_signal_locked(struct fence *fence)
 	struct fence_cb *cur, *tmp;
 	int ret = 0;
 
+	lockdep_assert_held(fence->lock);
+
 	if (WARN_ON(!fence))
 		return -EINVAL;
 
@@ -159,9 +161,6 @@ fence_wait_timeout(struct fence *fence, bool intr, signed long timeout)
 	if (WARN_ON(timeout < 0))
 		return -EINVAL;
 
-	if (timeout == 0)
-		return fence_is_signaled(fence);
-
 	trace_fence_wait_start(fence);
 	ret = fence->ops->wait(fence, intr, timeout);
 	trace_fence_wait_end(fence);
@@ -215,6 +214,28 @@ void fence_enable_sw_signaling(struct fence *fence)
 	}
 }
 EXPORT_SYMBOL(fence_enable_sw_signaling);
+
+/**
+ * fence_enable_sw_signaling_nolock - enable signaling on fence without
+ * taking lock
+ * @fence:	[in]	the fence to enable
+ *
+ * WARNING this is only safe to use when you know you have the only reference
+ * to the fence there is no possibility for race conditions as a result of
+ * calling ops->enable_signaling() without lock.  Ie. it is probably only safe
+ * to use from the fence's construction function.
+ */
+void fence_enable_sw_signaling_nolock(struct fence *fence)
+{
+	if (!test_and_set_bit(FENCE_FLAG_ENABLE_SIGNAL_BIT, &fence->flags) &&
+	    !test_bit(FENCE_FLAG_SIGNALED_BIT, &fence->flags)) {
+		trace_fence_enable_signal(fence);
+
+		if (!fence->ops->enable_signaling(fence))
+			fence_signal(fence);
+	}
+}
+EXPORT_SYMBOL(fence_enable_sw_signaling_nolock);
 
 /**
  * fence_add_callback - add a callback to be called when the fence
@@ -329,8 +350,12 @@ fence_remove_callback(struct fence *fence, struct fence_cb *cb)
 	spin_lock_irqsave(fence->lock, flags);
 
 	ret = !list_empty(&cb->node);
-	if (ret)
+	if (ret) {
 		list_del_init(&cb->node);
+		if (list_empty(&fence->cb_list))
+			if (fence->ops->disable_signaling)
+				fence->ops->disable_signaling(fence);
+	}
 
 	spin_unlock_irqrestore(fence->lock, flags);
 

@@ -1173,6 +1173,19 @@ config ARM_ERRATA_773022
 	  loop buffer may deliver incorrect instructions. This
 	  workaround disables the loop buffer to avoid the erratum.
 
+config ARM_ERRATA_814220
+	bool "ARM errata: L2 cache maintenance operation can overtake a L1 cache maintenance operation"
+	depends on CPU_V7
+	help
+	  This option enables the workaround for erratum 814220
+	  Code that intends to clean dirty data from L1 to L2 and then
+	  from L2 to L3 using set/way operations might not behave as
+	  expected. The L2 to L3 operation might happen first and
+	  result in dirty data remaining in L2 after the L1 to L2
+	  operation has completed.
+
+	  This workaround put a DSB before changing cache levels
+
 config ARM_ERRATA_818325_852422
 	bool "ARM errata: A12: some seqs of opposed cond code instrs => deadlock or corruption"
 	depends on CPU_V7
@@ -1226,6 +1239,24 @@ config ARM_ERRATA_852423
 	  This is identical to Cortex-A12 erratum 852422.  It is a separate
 	  config option from the A12 erratum due to the way errata are checked
 	  for and handled.
+
+config ARM_ERRATA_855873
+	bool "ARM errata: An eviction might overtake a cache clean operation"
+	help
+	  This option enables the workaround for the 855873 Cortex-A53
+	  (up to r0p4) erratum. Because of this erratum, the processor
+	  might issue an eviction and an L2 cache clean operation to
+	  the interconnect in the wrong order.
+
+config ARM_ERRATA_824069
+	bool "ARM errata: Cache line might not be marked as clean after a CleanShared snoop"
+	help
+	  This option enables the workaround for the 824069 Cortex-A53
+	  (up to r0p2) erratum. If a Cortex-A53 processor is executing
+	  a store or PLDW instruction at the same time as a processor
+	  in another cluster is executing a cache maintenance operation
+	  to the same address, then this erratum might cause
+	  a clean cache line to be incorrectly marked as dirty.
 
 endmenu
 
@@ -1732,6 +1763,25 @@ config ARM_MODULE_PLTS
 
 	  Say y if you are getting out of memory errors while loading modules
 
+config RANDOMIZE_BASE
+	bool "<FAKE> Randomize the address of the kernel image"
+	default y
+	help
+	  For FIX Bug: 69167010
+	  Add new config to prevent android-base.cfg locating RANDOMIZE_BASE config
+	  Randomizes the virtual address at which the kernel image is
+	  loaded, as a security feature that deters exploit attempts
+	  relying on knowledge of the location of kernel internals.
+
+	  It is the bootloader's job to provide entropy, by passing a
+	  random u64 value in /chosen/kaslr-seed at kernel entry.
+	  When booting via the UEFI stub, it will invoke the firmware's
+	  EFI_RNG_PROTOCOL implementation (if available) to supply entropy
+	  to the kernel proper. In addition, it will randomise the physical
+	  location of the kernel Image as well.
+
+	  If unsure, say N.
+
 source "mm/Kconfig"
 
 config FORCE_MAX_ZONEORDER
@@ -1836,6 +1886,15 @@ config XEN
 	help
 	  Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
 
+config ARM_FLUSH_CONSOLE_ON_RESTART
+	bool "Force flush the console on restart"
+	help
+	  If the console is locked while the system is rebooted, the messages
+	  in the temporary logbuffer would not have propogated to all the
+	  console drivers. This option forces the console lock to be
+	  released if it failed to be acquired, which will cause all the
+	  pending messages to be flushed.
+
 endmenu
 
 menu "Boot options"
@@ -1863,6 +1922,37 @@ config DEPRECATED_PARAM_STRUCT
 	help
 	  This was deprecated in 2001 and announced to live on for 5 years.
 	  Some old boot loaders still use this way.
+
+config BUILD_ARM_APPENDED_DTB_IMAGE
+	bool "Build a concatenated zImage/dtb by default"
+	depends on OF
+	help
+	  Enabling this option will cause a concatenated zImage and list of
+	  DTBs to be built by default (instead of a standalone zImage.)
+	  The image will built in arch/arm/boot/zImage-dtb
+
+config BUILD_ARM_APPENDED_DTB_IMAGE_NAMES
+	string "Default dtb names"
+	depends on BUILD_ARM_APPENDED_DTB_IMAGE
+	help
+	  Space separated list of names of dtbs to append when
+	  building a concatenated zImage-dtb.
+
+config BUILD_ARM_DTB_OVERLAY_IMAGE
+	bool "Build a device tree overlay image"
+	depends on OF
+	help
+	  Enabling this option will casue overlay device tree
+	  to be built by default.
+	  Overlay DT contains device-specific configurations.
+	  Please be aware that bootloader supports DT merging.
+
+config BUILD_ARM_DTB_OVERLAY_IMAGE_NAMES
+	string "Default dtb overlay names"
+	depends on BUILD_ARM_DTB_OVERLAY_IMAGE
+	help
+	  Space separated list of names of dtbs to append when
+	  building a concatenated overlay image
 
 # Compressed boot loader in ROM.  Yes, we really want to ask about
 # TEXT and BSS so we preserve their values in the config files.

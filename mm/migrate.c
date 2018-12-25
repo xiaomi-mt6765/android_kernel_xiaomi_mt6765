@@ -2,6 +2,7 @@
  * Memory Migration functionality - linux/mm/migrate.c
  *
  * Copyright (C) 2006 Silicon Graphics, Inc., Christoph Lameter
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * Page migration was first developed in the context of the memory hotplug
  * project. The main authors of the migration code are:

@@ -2,6 +2,7 @@
  *  thermal.c - Generic Thermal Management Sysfs support.
  *
  *  Copyright (C) 2008 Intel Corp
+ *  Copyright (C) 2018 XiaoMi, Inc.
  *  Copyright (C) 2008 Zhang Rui <rui.zhang@intel.com>
  *  Copyright (C) 2008 Sujith Thomas <sujith.thomas@intel.com>
  *
@@ -44,6 +45,7 @@
 
 #include "thermal_core.h"
 #include "thermal_hwmon.h"
+#include "mtk_thermal_policy.h"
 
 MODULE_AUTHOR("Zhang Rui");
 MODULE_DESCRIPTION("Generic thermal management sysfs support");
@@ -61,6 +63,8 @@ static DEFINE_MUTEX(thermal_list_lock);
 static DEFINE_MUTEX(thermal_governor_lock);
 
 static atomic_t in_suspend;
+
+static struct xm_switch_config xs_config;
 
 static struct thermal_governor *def_governor;
 
@@ -396,11 +400,13 @@ static void thermal_zone_device_set_polling(struct thermal_zone_device *tz,
 					    int delay)
 {
 	if (delay > 1000)
-		mod_delayed_work(system_freezable_wq, &tz->poll_queue,
-				 round_jiffies(msecs_to_jiffies(delay)));
+		mod_delayed_work(system_freezable_power_efficient_wq,
+					&tz->poll_queue,
+					round_jiffies(msecs_to_jiffies(delay)));
 	else if (delay)
-		mod_delayed_work(system_freezable_wq, &tz->poll_queue,
-				 msecs_to_jiffies(delay));
+		mod_delayed_work(system_freezable_power_efficient_wq,
+					&tz->poll_queue,
+					msecs_to_jiffies(delay));
 	else
 		cancel_delayed_work(&tz->poll_queue);
 }
@@ -701,6 +707,28 @@ mode_store(struct device *dev, struct device_attribute *attr,
 
 	if (result)
 		return result;
+
+	return count;
+}
+
+static ssize_t
+sconfig_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "Current thermal policy index: %d\n",
+		xs_config.policy_index);
+}
+
+static ssize_t
+sconfig_store(struct device *dev, struct device_attribute *attr,
+	   const char *buf, size_t count)
+{
+	int index;
+
+	if (kstrtoint(buf, 10, &index))
+		return -EINVAL;
+
+	xs_config.policy_index = index;
+	mtk_change_thermal_policy(xs_config.policy_index);
 
 	return count;
 }
@@ -1162,6 +1190,7 @@ int power_actor_set_power(struct thermal_cooling_device *cdev,
 static DEVICE_ATTR(type, 0444, type_show, NULL);
 static DEVICE_ATTR(temp, 0444, temp_show, NULL);
 static DEVICE_ATTR(mode, 0644, mode_show, mode_store);
+static DEVICE_ATTR(sconfig, 0664, sconfig_show, sconfig_store);
 static DEVICE_ATTR(passive, S_IRUGO | S_IWUSR, passive_show, passive_store);
 static DEVICE_ATTR(policy, S_IRUGO | S_IWUSR, policy_show, policy_store);
 static DEVICE_ATTR(available_policies, S_IRUGO, available_policies_show, NULL);
@@ -1999,14 +2028,14 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 			goto unregister;
 	}
 
+	INIT_DELAYED_WORK(&(tz->poll_queue), thermal_zone_device_check);
+
 	mutex_lock(&thermal_list_lock);
 	list_add_tail(&tz->node, &thermal_tz_list);
 	mutex_unlock(&thermal_list_lock);
 
 	/* Bind cooling devices for this zone */
 	bind_tz(tz);
-
-	INIT_DELAYED_WORK(&(tz->poll_queue), thermal_zone_device_check);
 
 	thermal_zone_device_reset(tz);
 	/* Update the new thermal zone and mark it as already updated. */
@@ -2039,6 +2068,12 @@ void thermal_zone_device_unregister(struct thermal_zone_device *tz)
 	tzp = tz->tzp;
 
 	mutex_lock(&thermal_list_lock);
+
+	tz->polling_delay = 0;
+
+	/* force stop pending/running delayed work*/
+	cancel_delayed_work_sync(&(tz->poll_queue));
+
 	list_for_each_entry(pos, &thermal_tz_list, node)
 	    if (pos == tz)
 		break;
@@ -2069,7 +2104,7 @@ void thermal_zone_device_unregister(struct thermal_zone_device *tz)
 
 	mutex_unlock(&thermal_list_lock);
 
-	thermal_zone_device_set_polling(tz, 0);
+	/* thermal_zone_device_set_polling(tz, 0); */
 
 	if (tz->type[0])
 		device_remove_file(&tz->device, &dev_attr_type);
@@ -2296,11 +2331,13 @@ static int thermal_pm_notify(struct notifier_block *nb,
 	case PM_POST_RESTORE:
 	case PM_POST_SUSPEND:
 		atomic_set(&in_suspend, 0);
+		mutex_lock(&thermal_list_lock);
 		list_for_each_entry(tz, &thermal_tz_list, node) {
 			thermal_zone_device_reset(tz);
 			thermal_zone_device_update(tz,
 						   THERMAL_EVENT_UNSPECIFIED);
 		}
+		mutex_unlock(&thermal_list_lock);
 		break;
 	default:
 		break;
@@ -2311,6 +2348,46 @@ static int thermal_pm_notify(struct notifier_block *nb,
 static struct notifier_block thermal_pm_nb = {
 	.notifier_call = thermal_pm_notify,
 };
+
+/**
+ * register_xm_switch_config - create a sconfig sys node
+ * Create "/sys/class/thermal/thermal_message/sconfig"
+ * for Miui changing thermal policy
+ * Return: 0 on success, proper error code otherwise
+ *
+ */
+int __init register_xm_switch_config(void)
+{
+	int result;
+
+	xs_config.device.class = &thermal_class;
+
+	dev_set_name(&xs_config.device, "thermal_message");
+	result = device_register(&xs_config.device);
+	if (result)
+		return result;
+
+	/* sys I/F */
+	result = device_create_file(&xs_config.device, &dev_attr_sconfig);
+	if (result)
+		goto unregister_device;
+
+	return 0;
+
+unregister_device:
+	device_unregister(&xs_config.device);
+	return result;
+}
+
+/**
+ * unregister_xm_switch_config - destroy the sconfig sys node
+ *
+ */
+void unregister_xm_switch_config(void)
+{
+	device_remove_file(&xs_config.device, &dev_attr_sconfig);
+	device_unregister(&xs_config.device);
+}
 
 static int __init thermal_init(void)
 {
@@ -2332,13 +2409,21 @@ static int __init thermal_init(void)
 	if (result)
 		goto exit_netlink;
 
+	result = register_xm_switch_config();
+	if (result) {
+		pr_warn("XM sconfig can not register\n");
+		goto destroy_tz;
+	}
 	result = register_pm_notifier(&thermal_pm_nb);
 	if (result)
 		pr_warn("Thermal: Can not register suspend notifier, return %d\n",
 			result);
 
+
 	return 0;
 
+destroy_tz:
+	of_thermal_destroy_zones();
 exit_netlink:
 	genetlink_exit();
 unregister_class:
@@ -2357,6 +2442,7 @@ error:
 static void __exit thermal_exit(void)
 {
 	unregister_pm_notifier(&thermal_pm_nb);
+	unregister_xm_switch_config();
 	of_thermal_destroy_zones();
 	genetlink_exit();
 	class_unregister(&thermal_class);

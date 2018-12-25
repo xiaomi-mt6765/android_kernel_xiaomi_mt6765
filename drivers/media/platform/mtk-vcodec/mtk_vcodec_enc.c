@@ -630,30 +630,20 @@ static int vidioc_venc_g_selection(struct file *file, void *priv,
 	struct mtk_vcodec_ctx *ctx = fh_to_ctx(priv);
 	struct mtk_q_data *q_data;
 
-	if (s->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
+	if (!V4L2_TYPE_IS_OUTPUT(s->type))
+		return -EINVAL;
+
+	if (s->target != V4L2_SEL_TGT_COMPOSE)
 		return -EINVAL;
 
 	q_data = mtk_venc_get_q_data(ctx, s->type);
 	if (!q_data)
 		return -EINVAL;
 
-	switch (s->target) {
-	case V4L2_SEL_TGT_CROP_DEFAULT:
-	case V4L2_SEL_TGT_CROP_BOUNDS:
-		s->r.top = 0;
-		s->r.left = 0;
-		s->r.width = q_data->coded_width;
-		s->r.height = q_data->coded_height;
-		break;
-	case V4L2_SEL_TGT_CROP:
-		s->r.top = 0;
-		s->r.left = 0;
-		s->r.width = q_data->visible_width;
-		s->r.height = q_data->visible_height;
-		break;
-	default:
-		return -EINVAL;
-	}
+	s->r.top = 0;
+	s->r.left = 0;
+	s->r.width = q_data->visible_width;
+	s->r.height = q_data->visible_height;
 
 	return 0;
 }
@@ -664,26 +654,22 @@ static int vidioc_venc_s_selection(struct file *file, void *priv,
 	struct mtk_vcodec_ctx *ctx = fh_to_ctx(priv);
 	struct mtk_q_data *q_data;
 
-	if (s->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
+
+	if (!V4L2_TYPE_IS_OUTPUT(s->type))
+		return -EINVAL;
+
+	if (s->target != V4L2_SEL_TGT_COMPOSE)
 		return -EINVAL;
 
 	q_data = mtk_venc_get_q_data(ctx, s->type);
 	if (!q_data)
 		return -EINVAL;
 
-	switch (s->target) {
-	case V4L2_SEL_TGT_CROP:
-		/* Only support crop from (0,0) */
-		s->r.top = 0;
-		s->r.left = 0;
-		s->r.width = min(s->r.width, q_data->coded_width);
-		s->r.height = min(s->r.height, q_data->coded_height);
-		q_data->visible_width = s->r.width;
-		q_data->visible_height = s->r.height;
-		break;
-	default:
-		return -EINVAL;
-	}
+	s->r.top = 0;
+	s->r.left = 0;
+	q_data->visible_width = s->r.width;
+	q_data->visible_height = s->r.height;
+
 	return 0;
 }
 
@@ -1166,7 +1152,7 @@ static int m2mops_venc_job_ready(void *m2m_priv)
 	struct mtk_vcodec_ctx *ctx = m2m_priv;
 
 	if (ctx->state == MTK_STATE_ABORT || ctx->state == MTK_STATE_FREE) {
-		mtk_v4l2_debug(3, "[%d]Not ready: state=0x%x.",
+		mtk_v4l2_debug(4, "[%d]Not ready: state=0x%x.",
 			       ctx->id, ctx->state);
 		return 0;
 	}

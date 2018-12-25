@@ -31,6 +31,13 @@ int mmc_switch_status_error(struct mmc_host *host, u32 status);
 int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 		unsigned int timeout_ms, bool use_busy_signal, bool send_status,
 		bool ignore_crc);
+//BUG343232,hujinfan@wt,20180328,start
+int mmc_send_hynix_cmd(struct mmc_card *card, u32 opcode, u32 arg);
+int mmc_send_cxd_data(struct mmc_card *card, struct mmc_host *host,
+		u32 opcode, void *buf, unsigned len);
+int mmc_send_micron_hr(struct mmc_card *card, struct mmc_host *host,
+		u32 opcode, void *buf, unsigned len);
+//BUG343232,hujinfan@wt,20180328,end
 
 #endif
 

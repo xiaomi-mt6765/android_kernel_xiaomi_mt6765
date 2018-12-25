@@ -206,6 +206,7 @@ struct ext4_io_submit {
 	struct bio		*io_bio;
 	ext4_io_end_t		*io_end;
 	sector_t		io_next_block;
+	struct inode		*io_crypt_inode;
 };
 
 /*
@@ -2450,7 +2451,8 @@ extern int ext4_mb_add_groupinfo(struct super_block *sb,
 		ext4_group_t i, struct ext4_group_desc *desc);
 extern int ext4_group_add_blocks(handle_t *handle, struct super_block *sb,
 				ext4_fsblk_t block, unsigned long count);
-extern int ext4_trim_fs(struct super_block *, struct fstrim_range *);
+extern int ext4_trim_fs(struct super_block *, struct fstrim_range *,
+				unsigned long blkdev_flags);
 
 /* inode.c */
 int ext4_inode_is_fast_symlink(struct inode *inode);
@@ -3196,6 +3198,12 @@ extern int ext4_bio_write_page(struct ext4_io_submit *io,
 			       int len,
 			       struct writeback_control *wbc,
 			       bool keep_towrite);
+extern int ext4_bio_write_page_crypt(struct ext4_io_submit *io,
+			struct page *page,
+			int len,
+			struct writeback_control *wbc,
+			bool keep_towrite,
+			struct inode *inode);
 
 /* mmp.c */
 extern int ext4_multi_mount_protect(struct super_block *, ext4_fsblk_t);

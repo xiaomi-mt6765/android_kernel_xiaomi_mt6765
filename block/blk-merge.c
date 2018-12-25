@@ -6,6 +6,7 @@
 #include <linux/bio.h>
 #include <linux/blkdev.h>
 #include <linux/scatterlist.h>
+#include <mt-plat/mtk_blocktag.h>
 
 #include <trace/events/block.h>
 
@@ -436,9 +437,13 @@ static int __blk_bios_map_sg(struct request_queue *q, struct bio *bio,
 	}
 
 	for_each_bio(bio)
-		bio_for_each_segment(bvec, bio, iter)
+		bio_for_each_segment(bvec, bio, iter) {
 			__blk_segment_map_sg(q, &bvec, sglist, &bvprv, sg,
 					     &nsegs, &cluster);
+#ifdef CONFIG_MTK_BLOCK_TAG
+			mtk_btag_pidlog_map_sg(q, bio, &bvec);
+#endif
+		}
 
 	return nsegs;
 }
@@ -667,6 +672,29 @@ static void blk_account_io_merge(struct request *req)
 	}
 }
 
+static bool crypto_not_mergeable(const struct bio *bio, const struct bio *nxt)
+{
+	/* If neither is encrypted, no veto from us. */
+	if (~(bio->bi_crypt_ctx.bc_flags | nxt->bi_crypt_ctx.bc_flags) &
+	    BC_CRYPT) {
+		return false;
+	}
+
+	/* If one's encrypted and the other isn't, don't merge. */
+	if ((bio->bi_crypt_ctx.bc_flags ^ nxt->bi_crypt_ctx.bc_flags)
+	    & BC_CRYPT) {
+		return true;
+	}
+
+	/* If the key lengths are different or the keys aren't the
+	 * same, don't merge.
+	 */
+	return ((bio->bi_crypt_ctx.bc_key_size !=
+		 nxt->bi_crypt_ctx.bc_key_size) ||
+		(bio->bi_crypt_ctx.bc_keyring_key !=
+		 nxt->bi_crypt_ctx.bc_keyring_key));
+}
+
 /*
  * Has to be called with the request spinlock acquired
  */
@@ -692,6 +720,9 @@ static int attempt_merge(struct request_queue *q, struct request *req,
 
 	if (req_op(req) == REQ_OP_WRITE_SAME &&
 	    !blk_write_same_mergeable(req->bio, next->bio))
+		return 0;
+
+	if (crypto_not_mergeable(req->bio, next->bio))
 		return 0;
 
 	/*
@@ -802,6 +833,9 @@ bool blk_rq_merge_ok(struct request *rq, struct bio *bio)
 	/* must be using the same buffer */
 	if (req_op(rq) == REQ_OP_WRITE_SAME &&
 	    !blk_write_same_mergeable(rq->bio, bio))
+		return false;
+
+	if (crypto_not_mergeable(rq->bio, bio))
 		return false;
 
 	return true;

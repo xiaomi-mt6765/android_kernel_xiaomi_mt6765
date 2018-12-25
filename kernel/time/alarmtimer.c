@@ -25,6 +25,9 @@
 #include <linux/posix-timers.h>
 #include <linux/workqueue.h>
 #include <linux/freezer.h>
+#include <linux/ratelimit.h>
+#include <linux/module.h>
+#include <linux/moduleparam.h>
 
 /**
  * struct alarm_base - Alarm timer bases
@@ -45,6 +48,15 @@ static ktime_t freezer_delta;
 static DEFINE_SPINLOCK(freezer_delta_lock);
 
 static struct wakeup_source *ws;
+
+#define AUTOWAKEUP_MAGIC 0xA2370000
+#define AUTOWAKEUP_MASK  0x0000FFFF
+
+static unsigned int auto_wakeup_time = AUTOWAKEUP_MAGIC;
+#define AUTOWAKEUP_VALID_TIME_GET() \
+	(AUTOWAKEUP_MAGIC == (auto_wakeup_time & (~AUTOWAKEUP_MASK)) ? (AUTOWAKEUP_MASK & auto_wakeup_time) : 0)
+module_param_named(auto_wakeup_time, auto_wakeup_time, uint, S_IRUGO | S_IWUSR | S_IWGRP);
+MODULE_PARM_DESC(auto_wakeup_time, "vRTC auto  wakeup expire time(default is 0s)");
 
 #ifdef CONFIG_RTC_CLASS
 /* rtc timer and device for setting alarm wakeups at suspend */
@@ -136,8 +148,15 @@ static inline void alarmtimer_rtc_timer_init(void) { }
  */
 static void alarmtimer_enqueue(struct alarm_base *base, struct alarm *alarm)
 {
+	static DEFINE_RATELIMIT_STATE(ratelimit, HZ - 1, 5);
+
 	if (alarm->state & ALARMTIMER_STATE_ENQUEUED)
 		timerqueue_del(&base->timerqueue, &alarm->node);
+
+	if (__ratelimit(&ratelimit)) {
+		ratelimit.begin = jiffies;
+		pr_notice("%s, %lld\n", __func__, alarm->node.expires.tv64);
+	}
 
 	timerqueue_add(&base->timerqueue, &alarm->node);
 	alarm->state |= ALARMTIMER_STATE_ENQUEUED;
@@ -218,12 +237,13 @@ EXPORT_SYMBOL_GPL(alarm_expires_remaining);
  */
 static int alarmtimer_suspend(struct device *dev)
 {
-	struct rtc_time tm;
-	ktime_t min, now;
+	struct rtc_time tm, time;
+	ktime_t min, now, temp;
 	unsigned long flags;
 	struct rtc_device *rtc;
 	int i;
 	int ret;
+	unsigned int wakeup_time = 0;
 
 	spin_lock_irqsave(&freezer_delta_lock, flags);
 	min = freezer_delta;
@@ -247,8 +267,10 @@ static int alarmtimer_suspend(struct device *dev)
 		if (!next)
 			continue;
 		delta = ktime_sub(next->expires, base->gettime());
-		if (!min.tv64 || (delta.tv64 < min.tv64))
+		if (!min.tv64 || (delta.tv64 < min.tv64)) {
 			min = delta;
+			temp = next->expires;
+		}
 	}
 	if (min.tv64 == 0)
 		return 0;
@@ -258,11 +280,25 @@ static int alarmtimer_suspend(struct device *dev)
 		return -EBUSY;
 	}
 
+	wakeup_time = AUTOWAKEUP_VALID_TIME_GET();
+	if (unlikely(0 != wakeup_time)) {
+		min = ktime_set(wakeup_time, 0);
+		pr_err("auto wakeup: wake up in %d seconds\n", wakeup_time);
+	}
+
 	/* Setup an rtc timer to fire that far in the future */
 	rtc_timer_cancel(rtc, &rtctimer);
 	rtc_read_time(rtc, &tm);
 	now = rtc_tm_to_ktime(tm);
 	now = ktime_add(now, min);
+
+	time = rtc_ktime_to_tm(now);
+	pr_notice_ratelimited("%s convert %lld to %04d/%02d/%02d %02d:%02d:%02d (now = %04d/%02d/%02d %02d:%02d:%02d)\n",
+			__func__, temp.tv64,
+			time.tm_year+1900, time.tm_mon+1, time.tm_mday,
+			time.tm_hour, time.tm_min, time.tm_sec,
+			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+			tm.tm_hour, tm.tm_min, tm.tm_sec);
 
 	/* Set alarm, if in the past reject suspend briefly to handle */
 	ret = rtc_timer_start(rtc, &rtctimer, now, ktime_set(0, 0));
@@ -271,9 +307,14 @@ static int alarmtimer_suspend(struct device *dev)
 	return ret;
 }
 
+extern void kpd_pwrkey_pmic_handler(unsigned long pressed);
 static int alarmtimer_resume(struct device *dev)
 {
 	struct rtc_device *rtc;
+
+	if (unlikely(0 != AUTOWAKEUP_VALID_TIME_GET())) {
+		kpd_pwrkey_pmic_handler(0x1);
+	}
 
 	rtc = alarmtimer_get_rtcdev();
 	if (rtc)

@@ -7,6 +7,7 @@
  *  See Documentation/nommu-mmap.txt
  *
  *  Copyright (c) 2004-2008 David Howells <dhowells@redhat.com>
+ *  Copyright (C) 2018 XiaoMi, Inc.
  *  Copyright (c) 2000-2003 David McCullough <davidm@snapgear.com>
  *  Copyright (c) 2000-2001 D Jeff Dionne <jeff@uClinux.org>
  *  Copyright (c) 2002      Greg Ungerer <gerg@snapgear.com>

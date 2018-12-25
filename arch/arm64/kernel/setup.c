@@ -191,6 +191,7 @@ static void __init setup_machine_fdt(phys_addr_t dt_phys)
 			cpu_relax();
 	}
 
+	machine_desc_set(of_flat_dt_get_machine_name());
 	dump_stack_set_arch_desc("%s (DT)", of_flat_dt_get_machine_name());
 }
 
@@ -290,6 +291,15 @@ void __init setup_arch(char **cmdline_p)
 	cpu_read_bootcpu_ops();
 	smp_init_cpus();
 	smp_build_mpidr_hash();
+
+#ifdef CONFIG_ARM64_SW_TTBR0_PAN
+	/*
+	 * Make sure init_thread_info.ttbr0 always generates translation
+	 * faults in case uaccess_enable() is inadvertently called by the init
+	 * thread.
+	 */
+	init_thread_info.ttbr0 = virt_to_phys(empty_zero_page);
+#endif
 
 #ifdef CONFIG_VT
 #if defined(CONFIG_VGA_CONSOLE)

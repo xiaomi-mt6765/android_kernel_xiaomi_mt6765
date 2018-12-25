@@ -2,6 +2,7 @@
  * mm/rmap.c - physical to virtual reverse mappings
  *
  * Copyright 2001, Rik van Riel <riel@conectiva.com.br>
+ * Copyright (C) 2018 XiaoMi, Inc.
  * Released under the General Public License (GPL).
  *
  * Simple, low overhead reverse mapping scheme.

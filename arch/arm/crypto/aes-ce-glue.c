@@ -2,6 +2,7 @@
  * aes-ce-glue.c - wrapper code for ARMv8 AES
  *
  * Copyright (C) 2015 Linaro Ltd <ard.biesheuvel@linaro.org>
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -295,14 +296,15 @@ static int ctr_encrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 		u8 __aligned(8) tail[AES_BLOCK_SIZE];
 
 		/*
-		 * Minimum alignment is 8 bytes, so if nbytes is <= 8, we need
-		 * to tell aes_ctr_encrypt() to only read half a block.
+		 * Tell aes_ctr_encrypt() to process a tail block.
 		 */
-		blocks = (nbytes <= 8) ? -1 : 1;
+		blocks = -1;
 
-		ce_aes_ctr_encrypt(tail, tsrc, (u8 *)ctx->key_enc,
+		ce_aes_ctr_encrypt(tail, NULL, (u8 *)ctx->key_enc,
 				   num_rounds(ctx), blocks, walk.iv);
-		memcpy(tdst, tail, nbytes);
+		if (tdst != tsrc)
+			memcpy(tdst, tsrc, nbytes);
+		crypto_xor(tdst, tail, nbytes);
 		err = blkcipher_walk_done(desc, &walk, 0);
 	}
 	kernel_neon_end();
@@ -368,7 +370,6 @@ static struct crypto_alg aes_algs[] = { {
 				  CRYPTO_ALG_INTERNAL,
 	.cra_blocksize		= AES_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct crypto_aes_ctx),
-	.cra_alignmask		= 7,
 	.cra_type		= &crypto_blkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_blkcipher = {
@@ -387,7 +388,6 @@ static struct crypto_alg aes_algs[] = { {
 				  CRYPTO_ALG_INTERNAL,
 	.cra_blocksize		= AES_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct crypto_aes_ctx),
-	.cra_alignmask		= 7,
 	.cra_type		= &crypto_blkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_blkcipher = {
@@ -406,7 +406,6 @@ static struct crypto_alg aes_algs[] = { {
 				  CRYPTO_ALG_INTERNAL,
 	.cra_blocksize		= 1,
 	.cra_ctxsize		= sizeof(struct crypto_aes_ctx),
-	.cra_alignmask		= 7,
 	.cra_type		= &crypto_blkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_blkcipher = {
@@ -425,7 +424,6 @@ static struct crypto_alg aes_algs[] = { {
 				  CRYPTO_ALG_INTERNAL,
 	.cra_blocksize		= AES_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct crypto_aes_xts_ctx),
-	.cra_alignmask		= 7,
 	.cra_type		= &crypto_blkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_blkcipher = {
@@ -443,7 +441,6 @@ static struct crypto_alg aes_algs[] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER|CRYPTO_ALG_ASYNC,
 	.cra_blocksize		= AES_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct async_helper_ctx),
-	.cra_alignmask		= 7,
 	.cra_type		= &crypto_ablkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_init		= ablk_init,
@@ -463,7 +460,6 @@ static struct crypto_alg aes_algs[] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER|CRYPTO_ALG_ASYNC,
 	.cra_blocksize		= AES_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct async_helper_ctx),
-	.cra_alignmask		= 7,
 	.cra_type		= &crypto_ablkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_init		= ablk_init,
@@ -483,7 +479,6 @@ static struct crypto_alg aes_algs[] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER|CRYPTO_ALG_ASYNC,
 	.cra_blocksize		= 1,
 	.cra_ctxsize		= sizeof(struct async_helper_ctx),
-	.cra_alignmask		= 7,
 	.cra_type		= &crypto_ablkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_init		= ablk_init,
@@ -503,7 +498,6 @@ static struct crypto_alg aes_algs[] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER|CRYPTO_ALG_ASYNC,
 	.cra_blocksize		= AES_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct async_helper_ctx),
-	.cra_alignmask		= 7,
 	.cra_type		= &crypto_ablkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_init		= ablk_init,

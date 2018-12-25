@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2013 Linaro Limited
  * Author: AKASHI Takahiro <takahiro.akashi@linaro.org>
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -12,6 +13,7 @@
 #include <linux/export.h>
 #include <linux/ftrace.h>
 
+#include <asm/stack_pointer.h>
 #include <asm/stacktrace.h>
 
 struct return_address_data {

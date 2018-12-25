@@ -3,6 +3,7 @@
 
 /*
  * Copyright 1995 Linus Torvalds
+ * Copyright (C) 2018 XiaoMi, Inc.
  */
 #include <linux/mm.h>
 #include <linux/fs.h>
@@ -221,8 +222,14 @@ static inline struct page *page_cache_alloc_cold(struct address_space *x)
 
 static inline gfp_t readahead_gfp_mask(struct address_space *x)
 {
+#ifdef CONFIG_CMA_REFUSE_PAGE_CACHE
 	return mapping_gfp_mask(x) |
 				  __GFP_COLD | __GFP_NORETRY | __GFP_NOWARN;
+#else
+	return mapping_gfp_mask(x) |
+				  __GFP_COLD | __GFP_NORETRY | __GFP_NOWARN |
+				  __GFP_CMA;
+#endif
 }
 
 typedef int filler_t(void *, struct page *);

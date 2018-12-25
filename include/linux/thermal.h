@@ -2,6 +2,7 @@
  *  thermal.h  ($Revision: 0 $)
  *
  *  Copyright (C) 2008  Intel Corp
+ * Copyright (C) 2018 XiaoMi, Inc.
  *  Copyright (C) 2008  Zhang Rui <rui.zhang@intel.com>
  *  Copyright (C) 2008  Sujith Thomas <sujith.thomas@intel.com>
  *
@@ -66,6 +67,8 @@
 #define DEFAULT_THERMAL_GOVERNOR       "user_space"
 #elif defined(CONFIG_THERMAL_DEFAULT_GOV_POWER_ALLOCATOR)
 #define DEFAULT_THERMAL_GOVERNOR       "power_allocator"
+#elif defined(CONFIG_THERMAL_DEFAULT_GOV_BACKWARD_COMPATIBLE)
+#define DEFAULT_THERMAL_GOVERNOR       "backward_compatible"
 #endif
 
 struct thermal_zone_device;
@@ -156,6 +159,16 @@ struct thermal_cooling_device {
 struct thermal_attr {
 	struct device_attribute attr;
 	char name[THERMAL_NAME_LENGTH];
+};
+
+/**
+ * struct xm_switch_config - structure for a XM switch config
+ * @device:	&struct device for this switch config
+ * @policy_index:	a thermal policy index chosen by Miui
+ */
+struct xm_switch_config {
+	struct device device;
+	int policy_index;
 };
 
 /**

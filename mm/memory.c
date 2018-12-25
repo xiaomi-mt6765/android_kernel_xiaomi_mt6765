@@ -2,6 +2,7 @@
  *  linux/mm/memory.c
  *
  *  Copyright (C) 1991, 1992, 1993, 1994  Linus Torvalds
+ *  Copyright (C) 2018 XiaoMi, Inc.
  */
 
 /*
@@ -83,6 +84,11 @@
 /* use the per-pgdat data instead for discontigmem - mbligh */
 unsigned long max_mapnr;
 struct page *mem_map;
+
+#ifdef CONFIG_MTK_MEMCFG
+unsigned long mem_map_size;
+EXPORT_SYMBOL(mem_map_size);
+#endif
 
 EXPORT_SYMBOL(max_mapnr);
 EXPORT_SYMBOL(mem_map);

@@ -1054,13 +1054,17 @@ EXPORT_SYMBOL(fb_set_var);
 
 int
 fb_blank(struct fb_info *info, int blank)
-{	
+{
 	struct fb_event event;
 	int ret = -EINVAL, early_ret;
 
  	if (blank > FB_BLANK_POWERDOWN)
  		blank = FB_BLANK_POWERDOWN;
-
+	if (info->blank == blank) {
+		if (info->fbops->fb_blank)
+			ret = info->fbops->fb_blank(blank, info);
+		return ret;
+	}
 	event.info = info;
 	event.data = &blank;
 
@@ -1079,7 +1083,8 @@ fb_blank(struct fb_info *info, int blank)
 		if (!early_ret)
 			fb_notifier_call_chain(FB_R_EARLY_EVENT_BLANK, &event);
 	}
-
+	if (!ret)
+		info->blank = blank;
  	return ret;
 }
 EXPORT_SYMBOL(fb_blank);
@@ -1636,6 +1641,7 @@ static int do_register_framebuffer(struct fb_info *fb_info)
 		if (!registered_fb[i])
 			break;
 	fb_info->node = i;
+	fb_info->blank = -1;
 	atomic_set(&fb_info->count, 1);
 	mutex_init(&fb_info->lock);
 	mutex_init(&fb_info->mm_lock);
@@ -1841,6 +1847,16 @@ void fb_set_suspend(struct fb_info *info, int state)
 	}
 }
 EXPORT_SYMBOL(fb_set_suspend);
+
+int fb_lcm_cabc_op(struct fb_info *info, unsigned int cmd, unsigned long arg)
+{
+	int err;
+
+	err = do_fb_ioctl(info, cmd, arg);
+
+	return err;
+}
+EXPORT_SYMBOL(fb_lcm_cabc_op);
 
 /**
  *	fbmem_init - init frame buffer subsystem

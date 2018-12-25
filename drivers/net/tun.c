@@ -1276,6 +1276,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		return -EINVAL;
 	}
 
+	if (pi.flags & htons(0xF000)) {  //this is normal packet or GRO packet
+		skb->ip_summed = CHECKSUM_UNNECESSARY;
+		if (pi.flags & htons(0x0F00)) {  //this is GRO packet
+			skb_shinfo(skb)->gso_size = 1;
+			skb_shinfo(skb)->gso_type = 1;
+		}
+	}
 	switch (tun->flags & TUN_TYPE_MASK) {
 	case IFF_TUN:
 		if (tun->flags & IFF_NO_PI) {
@@ -2009,6 +2016,12 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 	unsigned int ifindex;
 	int le;
 	int ret;
+
+#ifdef CONFIG_ANDROID_PARANOID_NETWORK
+	if (cmd != TUNGETIFF && !capable(CAP_NET_ADMIN)) {
+		return -EPERM;
+	}
+#endif
 
 	if (cmd == TUNSETIFF || cmd == TUNSETQUEUE || _IOC_TYPE(cmd) == 0x89) {
 		if (copy_from_user(&ifr, argp, ifreq_len))

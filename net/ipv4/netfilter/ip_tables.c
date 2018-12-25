@@ -2,6 +2,7 @@
  * Packet matching code.
  *
  * Copyright (C) 1999 Paul `Rusty' Russell & Michael J. Neuling
+ * Copyright (C) 2018 XiaoMi, Inc.
  * Copyright (C) 2000-2005 Netfilter Core Team <coreteam@netfilter.org>
  * Copyright (C) 2006-2010 Patrick McHardy <kaber@trash.net>
  *
@@ -345,8 +346,13 @@ ipt_do_table(struct sk_buff *skb,
 				continue;
 			}
 			if (table_base + v != ipt_next_entry(e) &&
-			    !(e->ip.flags & IPT_F_GOTO))
+			    !(e->ip.flags & IPT_F_GOTO)) {
+				if (unlikely(stackidx >= private->stacksize)) {
+					verdict = NF_DROP;
+					break;
+				}
 				jumpstack[stackidx++] = e;
+			}
 
 			e = get_entry(table_base, v);
 			continue;

@@ -354,6 +354,154 @@ static const struct file_operations mmc_dbg_ext_csd_fops = {
 	.llseek		= default_llseek,
 };
 
+//BUG343232,hujinfan@wt,20180328,start
+static int mmc_hr_open(struct inode *inode, struct file *filp)
+{
+	struct mmc_card *card = inode->i_private;
+	char *buf;
+	ssize_t n = 0;
+	u8 hr[512] = {0};
+	int err, i;
+//BUG343232,zhaobeilong@wt,20180505,disable cmdq when send vendor cmd,start
+#ifdef CONFIG_MTK_EMMC_CQ_SUPPORT
+	u8 cmdq_en;
+#endif
+//BUG343232,zhaobeilong@wt,20180505,disable cmdq when send vendor cmd,start
+	buf = kmalloc(EXT_CSD_STR_LEN + 1, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	if ((card->cid.manfid != CID_MANFID_HYNIX)&&(card->cid.manfid != CID_MANFID_SAMSUNG)
+			&&(card->cid.manfid != CID_MANFID_MICRON)) {
+		pr_err("%s: manfid = 0x%02x\n", __func__, card->cid.manfid);
+		snprintf(buf, EXT_CSD_STR_LEN + 1, "NOT SUPPORTED\n");
+		filp->private_data = buf;
+		return 0;
+	}
+
+//BUG343232,zhaobeilong@wt,20180505,disable cmdq when send vendor cmd,start
+#ifdef CONFIG_MTK_EMMC_CQ_SUPPORT
+	cmdq_en = card->ext_csd.cmdq_mode_en;
+	if (cmdq_en) {
+		atomic_set(&card->host->stop_queue, 1);
+		mmc_wait_cmdq_empty(card->host);
+		mmc_get_card(card);
+
+		err = mmc_blk_cmdq_switch(card, 0);
+		if (err) {
+			pr_err("FFU: %s: disable cmdq error %d\n",
+				mmc_hostname(card->host), err);
+			atomic_set(&card->host->stop_queue, 0);
+			mmc_put_card(card);
+			goto out_free;
+		}
+	}else
+#endif
+//BUG343232,zhaobeilong@wt,20180505,disable cmdq when send vendor cmd,end
+	mmc_get_card(card);
+
+
+	if (card->cid.manfid == CID_MANFID_HYNIX) {
+		/* Get the Extended Health Roport for Hynix */
+		err = mmc_send_hynix_cmd(card, 60, 0x534D4900);
+		if (err) {
+			pr_err("%s: vc 1st cmd failed %d\n", __func__, err);
+			goto out_free;
+		} else {
+			pr_err("%s: vc 1st cmd succeed\n", __func__);
+		}
+
+
+		err = mmc_send_hynix_cmd(card, 60, 0x48525054);
+		if (err) {
+			pr_err("%s: vc  2nd cmd  failed %d\n", __func__, err);
+			goto out_free;
+		} else {
+			pr_err("%s: vc 2nd cmd succeed\n", __func__);
+		}
+
+		err = mmc_send_cxd_data(card, card->host, MMC_SEND_EXT_CSD, hr, 512);
+		if (err)
+			goto out_free;
+	} else if (card->cid.manfid == CID_MANFID_MICRON){
+		/* Get the Extended Health Roport for Micron */
+		/* 1. Set blocklen of 512bytes using CMD16 */
+		err = mmc_set_blocklen(card, 512);
+		if (err) {
+			pr_err("%s: Set blocklen of 512bytes using CMD16 failed %d\n", __func__, err);
+			goto out_free;
+		}
+
+		/* 2. Get HR data using CMD56 */
+		err = mmc_send_micron_hr(card, card->host, MMC_GEN_CMD, hr, 512);
+		if (err)
+			goto out_free;
+	} else {
+		pr_err("%s: manfid = 0x%02x\n", __func__, card->cid.manfid);
+	}
+
+	for (i = 0; i < 512; i++)
+		n += sprintf(buf + n, "%02x", hr[i]);
+	n += sprintf(buf + n, "\n");
+	BUG_ON(n != EXT_CSD_STR_LEN);
+
+	filp->private_data = buf;
+
+//BUG343232,zhaobeilong@wt,20180505,disable cmdq when send vendor cmd,start
+	#ifdef CONFIG_MTK_EMMC_CQ_SUPPORT
+	if (cmdq_en) {
+		err = mmc_blk_cmdq_switch(card, 1);
+		if (err)
+			pr_err("FFU: %s: enable cmdq error %d\n",
+				mmc_hostname(card->host), err);
+		atomic_set(&card->host->stop_queue, 0);
+	}
+	#endif
+//BUG343232,zhaobeilong@wt,20180505,disable cmdq when send vendor cmd,end
+
+	mmc_put_card(card);
+
+	return 0;
+
+out_free:
+//BUG343232,zhaobeilong@wt,20180505,disable cmdq when send vendor cmd,start
+#ifdef CONFIG_MTK_EMMC_CQ_SUPPORT
+	if (cmdq_en) {
+		err = mmc_blk_cmdq_switch(card, 1);
+		if (err)
+			pr_err("FFU: %s: enable cmdq error %d\n",
+				mmc_hostname(card->host), err);
+		atomic_set(&card->host->stop_queue, 0);
+    }
+#endif
+//BUG343232,zhaobeilong@wt,20180505,disable cmdq when send vendor cmd,end
+	kfree(buf);
+	return err;
+}
+
+static ssize_t mmc_hr_read(struct file *filp, char __user *ubuf,
+				size_t cnt, loff_t *ppos)
+{
+	char *buf = filp->private_data;
+
+	return simple_read_from_buffer(ubuf, cnt, ppos,
+				       buf, EXT_CSD_STR_LEN);
+}
+
+static int mmc_hr_release(struct inode *inode, struct file *file)
+{
+	kfree(file->private_data);
+	return 0;
+}
+
+static const struct file_operations mmc_dbg_hr_fops = {
+	.open		= mmc_hr_open,
+	.read		= mmc_hr_read,
+	.release	= mmc_hr_release,
+	.llseek		= default_llseek,
+};
+//BUG343232,hujinfan@wt,20180328,end
+
 void mmc_add_card_debugfs(struct mmc_card *card)
 {
 	struct mmc_host	*host = card->host;
@@ -385,6 +533,12 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 		if (!debugfs_create_file("ext_csd", S_IRUSR, root, card,
 					&mmc_dbg_ext_csd_fops))
 			goto err;
+//BUG343232,hujinfan@wt,20180328,start
+	if (mmc_card_mmc(card))
+		if (!debugfs_create_file("hr", S_IRUSR, root, card,
+					&mmc_dbg_hr_fops))
+			goto err;
+//BUG343232,hujinfan@wt,20180328,end
 
 	return;
 

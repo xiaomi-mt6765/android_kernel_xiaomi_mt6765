@@ -386,7 +386,8 @@ LINUXINCLUDE    := \
 		-I$(objtree)/arch/$(hdr-arch)/include/generated/uapi \
 		-I$(objtree)/arch/$(hdr-arch)/include/generated \
 		$(if $(KBUILD_SRC), -I$(srctree)/include) \
-		-I$(objtree)/include
+		-I$(objtree)/include \
+		-I$(srctree)/drivers/misc/mediatek/include
 
 LINUXINCLUDE	+= $(filter-out $(LINUXINCLUDE),$(USERINCLUDE))
 
@@ -660,6 +661,14 @@ ifeq ($(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-goto.sh $(CC) $(KBUILD_CFLA
 	KBUILD_CFLAGS += -DCC_HAVE_ASM_GOTO
 	KBUILD_AFLAGS += -DCC_HAVE_ASM_GOTO
 endif
+
+#wangxun add factory flag for ATO version only.
+ifeq ($(WT_COMPILE_FACTORY_VERSION),yes)
+       KBUILD_CFLAGS += -DWT_COMPILE_FACTORY_VERSION
+endif
+#end
+
+KBUILD_CFLAGS += $(MTK_CDEFS)
 
 include scripts/Makefile.gcc-plugins
 

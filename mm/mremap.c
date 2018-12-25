@@ -2,6 +2,7 @@
  *	mm/mremap.c
  *
  *	(C) Copyright 1996 Linus Torvalds
+ *      Copyright (C) 2018 XiaoMi, Inc.
  *
  *	Address space accounting code	<alan@lxorguk.ukuu.org.uk>
  *	(C) Copyright 2002 Red Hat Inc, All Rights Reserved

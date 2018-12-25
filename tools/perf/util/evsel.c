@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, Red Hat Inc, Arnaldo Carvalho de Melo <acme@redhat.com>
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * Parts came from builtin-{top,stat,record}.c, see those files for further
  * copyright notes.

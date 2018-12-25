@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 ARM Ltd.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +16,8 @@
  */
 #ifndef __ASM_PERCPU_H
 #define __ASM_PERCPU_H
+
+#include <asm/stack_pointer.h>
 
 static inline void set_my_cpu_offset(unsigned long off)
 {

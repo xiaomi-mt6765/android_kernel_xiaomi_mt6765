@@ -2,6 +2,7 @@
  *  linux/mm/swap.c
  *
  *  Copyright (C) 1991, 1992, 1993, 1994  Linus Torvalds
+ *  Copyright (C) 2018 XiaoMi, Inc.
  */
 
 /*

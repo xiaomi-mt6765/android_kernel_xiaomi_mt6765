@@ -97,6 +97,8 @@ struct dentry {
 	struct super_block *d_sb;	/* The root of the dentry tree */
 	unsigned long d_time;		/* used by d_revalidate */
 	void *d_fsdata;			/* fs-specific data */
+	/* MTK:debug for hard to find reason issue */
+	void *d_fsdata_b[3];
 
 	union {
 		struct list_head d_lru;		/* LRU list */
@@ -142,6 +144,7 @@ struct dentry_operations {
 	int (*d_manage)(struct dentry *, bool);
 	struct dentry *(*d_real)(struct dentry *, const struct inode *,
 				 unsigned int);
+	void (*d_canonical_path)(const struct path *, struct path *);
 } ____cacheline_aligned;
 
 /*

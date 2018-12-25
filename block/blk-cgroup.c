@@ -3,6 +3,7 @@
  *
  * Based on ideas and code from CFQ, CFS and BFQ:
  * Copyright (C) 2003 Jens Axboe <axboe@kernel.dk>
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * Copyright (C) 2008 Fabio Checconi <fabio@gandalf.sssup.it>
  *		      Paolo Valente <paolo.valente@unimore.it>
@@ -1078,10 +1079,8 @@ int blkcg_init_queue(struct request_queue *q)
 	if (preloaded)
 		radix_tree_preload_end();
 
-	if (IS_ERR(blkg)) {
-		blkg_free(new_blkg);
+	if (IS_ERR(blkg))
 		return PTR_ERR(blkg);
-	}
 
 	q->root_blkg = blkg;
 	q->root_rl.blkg = blkg;
