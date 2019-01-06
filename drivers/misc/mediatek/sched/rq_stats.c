@@ -1050,7 +1050,7 @@ static ssize_t cpu_mcps_data_show(struct kobject *kobj,
 static struct kobj_attribute cpu_mcps_attr = __ATTR_RO(cpu_mcps_data);
 //MTK wfq add for bugreport+
 //hw_max_freq, last_mcps, inc_mcps, inc_time;
-u64 lastmcps[8][4]={0};
+u64 lastmcps[8][4]={{0},{0}};
 static ssize_t cpu_mcps_sum_show(struct kobject *kobj,
                                                                 struct kobj_attribute *attr, char *buf)
 {

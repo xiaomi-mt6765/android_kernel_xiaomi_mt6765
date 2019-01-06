@@ -150,8 +150,8 @@ u32 r13flg=0,spm_dbgflg=0;
  spm_info[5][0],total eint wakeups,
  spm_info[5][1],spm fail cnts;
  */
-u32 spm_info[6][2]={0};
-int scp_log[10][5]={0};
+u32 spm_info[6][2]={{0},{0}};
+int scp_log[10][5]={{0},{0}};
 int scp_cnt=0;
 static void summary_wakereason(struct wake_status *wakesta)
 {
