@@ -512,6 +512,7 @@ static ssize_t suspend_ctrl_show(struct kobject *kobj,
 	return show_pwr_ctrl(SPM_PWR_CTRL_SUSPEND, __spm_suspend.pwrctrl, buf);
 }
 
+/*
 static ssize_t dpidle_ctrl_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf)
 {
@@ -529,6 +530,7 @@ static ssize_t sodi_ctrl_show(struct kobject *kobj,
 {
 	return show_pwr_ctrl(SPM_PWR_CTRL_SODI, __spm_sodi.pwrctrl, buf);
 }
+*/
 
 static ssize_t vcore_dvfs_ctrl_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf)
@@ -1106,6 +1108,7 @@ static ssize_t suspend_ctrl_store(struct kobject *kobj,
 		buf, count);
 }
 
+/*
 static ssize_t dpidle_ctrl_store(struct kobject *kobj,
 	struct kobj_attribute *attr,
 				 const char *buf, size_t count)
@@ -1126,6 +1129,7 @@ static ssize_t sodi_ctrl_store(struct kobject *kobj,
 {
 	return store_pwr_ctrl(SPM_PWR_CTRL_SODI, &pwrctrl_so, buf, count);
 }
+*/
 
 static ssize_t vcore_dvfs_ctrl_store(struct kobject *kobj,
 	struct kobj_attribute *attr,
@@ -1155,18 +1159,22 @@ static ssize_t fm_suspend_show(struct kobject *kobj,
  * Init Function
  **************************************/
 DEFINE_ATTR_RW(suspend_ctrl);
+/*
 DEFINE_ATTR_RW(dpidle_ctrl);
 DEFINE_ATTR_RW(sodi3_ctrl);
 DEFINE_ATTR_RW(sodi_ctrl);
+*/
 DEFINE_ATTR_RW(vcore_dvfs_ctrl);
 DEFINE_ATTR_RO(fm_suspend);
 
 static struct attribute *spm_attrs[] = {
 	/* for spm_lp_scen.pwrctrl */
 	__ATTR_OF(suspend_ctrl),
+/*
 	__ATTR_OF(dpidle_ctrl),
 	__ATTR_OF(sodi3_ctrl),
 	__ATTR_OF(sodi_ctrl),
+*/
 	__ATTR_OF(vcore_dvfs_ctrl),
 	__ATTR_OF(fm_suspend),
 
