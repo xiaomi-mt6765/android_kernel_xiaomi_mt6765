@@ -2930,7 +2930,7 @@ initrd=0x45000000,0x200000 loglevel=8 androidboot.selinux=permissive";
 #ifdef CONFIG_MTK_AVB20_SUPPORT
 					fsmgr_flags = "wait,avb";
 #else
-					fsmgr_flags = "wait,verify";
+					fsmgr_flags = "wait";
 #endif
 #else
 					fsmgr_flags = "wait";
@@ -2948,7 +2948,7 @@ initrd=0x45000000,0x200000 loglevel=8 androidboot.selinux=permissive";
 #ifdef CONFIG_MTK_AVB20_SUPPORT
 					fsmgr_flags = "wait,avb";
 #else
-					fsmgr_flags = "wait,verify";
+					fsmgr_flags = "wait";
 #endif
 #else
 					fsmgr_flags = "wait";
@@ -2958,7 +2958,7 @@ initrd=0x45000000,0x200000 loglevel=8 androidboot.selinux=permissive";
 #ifdef CONFIG_MTK_AVB20_SUPPORT
 					fsmgr_flags = "wait,slotselect,avb";
 #else
-					fsmgr_flags = "wait,slotselect,verify";
+					fsmgr_flags = "wait,slotselect";
 #endif
 #else
 					fsmgr_flags = "wait,slotselect";
@@ -2978,7 +2978,7 @@ initrd=0x45000000,0x200000 loglevel=8 androidboot.selinux=permissive";
 #ifdef CONFIG_MTK_AVB20_SUPPORT
 					fsmgr_flags = "wait,avb";
 #else
-					fsmgr_flags = "wait,verify";
+					fsmgr_flags = "wait";
 #endif
 #else
 					fsmgr_flags = "wait";
@@ -2988,7 +2988,7 @@ initrd=0x45000000,0x200000 loglevel=8 androidboot.selinux=permissive";
 #ifdef CONFIG_MTK_AVB20_SUPPORT
 					fsmgr_flags = "wait,slotselect,avb";
 #else
-					fsmgr_flags = "wait,slotselect,verify";
+					fsmgr_flags = "wait,slotselect";
 #endif
 #else
 					fsmgr_flags = "wait,slotselect";
@@ -3027,4 +3027,3 @@ initrd=0x45000000,0x200000 loglevel=8 androidboot.selinux=permissive";
 #include "mt6357.dtsi"
 #include "mt6370.dtsi"
 #include "mt6370_pd.dtsi"
-
