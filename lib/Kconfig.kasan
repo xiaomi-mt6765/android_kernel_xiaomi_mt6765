@@ -43,6 +43,11 @@ config KASAN_INLINE
 	  make kernel's .text size much bigger.
 	  This requires a gcc version of 5.0 or later.
 
+config KASAN_ENHANCEMENT
+	bool "shadow scale 16"
+	help
+	  kasan enhancement
+
 endchoice
 
 config TEST_KASAN

@@ -2,6 +2,7 @@
  * Debugfs support for hosts and cards
  *
  * Copyright (C) 2008 Atmel Corporation
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -313,7 +314,15 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 		return -ENOMEM;
 
 	mmc_get_card(card);
+#ifdef CONFIG_MTK_EMMC_HW_CQ
+	/* disable cqhci before xf */
+	(void)mmc_blk_cmdq_switch(card, 0);
+#endif
 	err = mmc_get_ext_csd(card, &ext_csd);
+#ifdef CONFIG_MTK_EMMC_HW_CQ
+	/* enable cqhci after xf */
+	(void)mmc_blk_cmdq_switch(card, 1);
+#endif
 	mmc_put_card(card);
 	if (err)
 		goto out_free;
@@ -385,7 +394,6 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 		if (!debugfs_create_file("ext_csd", S_IRUSR, root, card,
 					&mmc_dbg_ext_csd_fops))
 			goto err;
-
 	return;
 
 err:

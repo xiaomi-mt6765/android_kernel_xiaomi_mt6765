@@ -509,6 +509,8 @@ void __init change_floppy(char *fmt, ...)
 }
 #endif
 
+void __attribute__((weak)) mount_block_root_post(void) { }
+
 void __init mount_root(void)
 {
 #ifdef CONFIG_ROOT_NFS
@@ -539,6 +541,8 @@ void __init mount_root(void)
 		if (err < 0)
 			pr_emerg("Failed to create /dev/root: %d\n", err);
 		mount_block_root("/dev/root", root_mountflags);
+
+		mount_block_root_post();
 	}
 #endif
 }
@@ -566,6 +570,7 @@ void __init prepare_namespace(void)
 	wait_for_device_probe();
 
 	md_run_setup();
+	dm_run_setup();
 
 	if (saved_root_name[0]) {
 		root_device_name = saved_root_name;

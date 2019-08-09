@@ -43,6 +43,7 @@
  *		Chetan Loke	:	Implemented TPACKET_V3 block abstraction
  *					layer.
  *					Copyright (C) 2011, <lokec@ccs.neu.edu>
+ *					Copyright (C) 2019 XiaoMi, Inc.
  *
  *
  *		This program is free software; you can redistribute it and/or
@@ -2186,6 +2187,10 @@ static int tpacket_rcv(struct sk_buff *skb, struct net_device *dev,
 		}
 	}
 
+    if (skb->ip_summed == CHECKSUM_UNNECESSARY ||
+            (NAPI_GRO_CB(skb)->count > 1 &&
+            (skb->dev && skb->dev->features & (1 << NETIF_F_GRO_BIT))))
+        status |= TP_STATUS_CSUM_VALID;
 	snaplen = skb->len;
 
 	res = run_filter(skb, sk, snaplen);

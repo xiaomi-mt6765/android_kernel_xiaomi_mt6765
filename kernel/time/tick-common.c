@@ -209,7 +209,7 @@ static void tick_setup_device(struct tick_device *td,
 	}
 
 	td->evtdev = newdev;
-
+	pr_info_ratelimited("%s assigned evtdev to cpu%d td\n", __func__, cpu);
 	/*
 	 * When the device is not per cpu, pin the interrupt to the
 	 * current cpu:

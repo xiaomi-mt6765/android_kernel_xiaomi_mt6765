@@ -4,6 +4,7 @@
 config ARM_CPUIDLE
         bool "Generic ARM/ARM64 CPU idle Driver"
         select DT_IDLE_STATES
+	select CPU_IDLE_MULTIPLE_DRIVERS
         help
           Select this to enable generic cpuidle driver for ARM.
           It provides a generic idle driver whose idle states are configured
@@ -74,3 +75,10 @@ config ARM_MVEBU_V7_CPUIDLE
 	depends on ARCH_MVEBU && !ARM64
 	help
 	  Select this to enable cpuidle on Armada 370, 38x and XP processors.
+
+config ARM_MTK_CPUIDLE
+	bool "CPU Idle drivers for Mediatek processors"
+	default y
+	select CPU_IDLE_MULTIPLE_DRIVERS
+	help
+	  Select this to enable cpuidle for Mediatek processors

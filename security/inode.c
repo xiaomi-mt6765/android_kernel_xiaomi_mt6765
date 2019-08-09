@@ -27,7 +27,7 @@ static int mount_count;
 
 static int fill_super(struct super_block *sb, void *data, int silent)
 {
-	static struct tree_descr files[] = {{""}};
+	static const struct tree_descr files[] = {{""}};
 
 	return simple_fill_super(sb, SECURITYFS_MAGIC, files);
 }
@@ -100,7 +100,7 @@ struct dentry *securityfs_create_file(const char *name, umode_t mode,
 	dir = d_inode(parent);
 
 	inode_lock(dir);
-	dentry = lookup_one_len(name, parent, strlen(name));
+	dentry = lookup_one_len2(name, mount, parent, strlen(name));
 	if (IS_ERR(dentry))
 		goto out;
 

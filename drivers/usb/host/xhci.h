@@ -1358,6 +1358,9 @@ struct xhci_segment {
 	void			*bounce_buf;
 	unsigned int		bounce_offs;
 	unsigned int		bounce_len;
+#if IS_ENABLED(CONFIG_MTK_UAC_POWER_SAVING)
+	int sram_flag;
+#endif
 };
 
 struct xhci_td {
@@ -1666,6 +1669,7 @@ struct xhci_hcd {
 #define XHCI_LIMIT_ENDPOINT_INTERVAL_7	(1 << 26)
 /* Reserved. It was XHCI_U2_DISABLE_WAKE */
 #define XHCI_ASMEDIA_MODIFY_FLOWCONTROL	(1 << 28)
+#define XHCI_DEV_WITH_SYNC_EP	(1 << 31)
 
 	unsigned int		num_active_eps;
 	unsigned int		limit_active_eps;
@@ -1693,7 +1697,10 @@ struct xhci_hcd {
 	u32			port_status_u0;
 /* Compliance Mode Timer Triggered every 2 seconds */
 #define COMP_MODE_RCVRY_MSECS 2000
-
+#if IS_ENABLED(CONFIG_MTK_UAC_POWER_SAVING)
+	dma_addr_t		msram_phys_addr;
+	void		*msram_virt_addr;
+#endif
 	/* platform-specific data -- must come last */
 	unsigned long		priv[0] __aligned(sizeof(s64));
 };

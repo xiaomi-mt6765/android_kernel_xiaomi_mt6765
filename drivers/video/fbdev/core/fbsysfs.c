@@ -2,6 +2,7 @@
  * fbsysfs.c - framebuffer device class and attributes
  *
  * Copyright (c) 2004 James Simmons <jsimmons@infradead.org>
+ * Copyright (C) 2019 XiaoMi, Inc.
  * 
  *	This program is free software you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -493,6 +494,49 @@ static ssize_t show_bl_curve(struct device *device,
 }
 #endif
 
+
+#define SYSFS_SET_LCM_CABC_MODE _IOW('O', 29, unsigned int)
+#define SYSFS_GET_LCM_CABC_MODE _IOW('O', 30, unsigned int)
+extern int fb_lcm_cabc_op(struct fb_info *info, unsigned int cmd, unsigned long arg);
+
+static ssize_t store_lcm_cabc(struct device *device,
+			      struct device_attribute *attr,
+			      const char *buf, size_t count)
+{
+	struct fb_info *fb_info = dev_get_drvdata(device);
+	int data, err;
+
+	if (!fb_info)
+		return -ENODEV;
+
+	err = kstrtoint(buf, 10, &data);
+	if (err)
+		return err;
+
+	console_lock();
+
+	err = fb_lcm_cabc_op(fb_info, SYSFS_SET_LCM_CABC_MODE, (unsigned long)&data);
+
+	console_unlock();
+
+	return count;
+}
+
+static ssize_t show_lcm_cabc(struct device *device,
+			     struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fb_info = dev_get_drvdata(device);
+	int data, err;
+
+	if (!fb_info)
+		return -ENODEV;
+
+	err = fb_lcm_cabc_op(fb_info, SYSFS_GET_LCM_CABC_MODE, (unsigned long)&data);
+
+	return(snprintf(buf, PAGE_SIZE, "%d\n", data));
+}
+
+
 /* When cmap is added back in it should be a binary attribute
  * not a text one. Consideration should also be given to converting
  * fbdev to use configfs instead of sysfs */
@@ -512,6 +556,9 @@ static struct device_attribute device_attrs[] = {
 #ifdef CONFIG_FB_BACKLIGHT
 	__ATTR(bl_curve, S_IRUGO|S_IWUSR, show_bl_curve, store_bl_curve),
 #endif
+
+	__ATTR(cabc, S_IRUGO|S_IWUSR, show_lcm_cabc, store_lcm_cabc),
+
 };
 
 int fb_init_device(struct fb_info *fb_info)

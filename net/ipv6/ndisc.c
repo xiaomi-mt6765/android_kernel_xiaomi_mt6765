@@ -1191,7 +1191,11 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 		 */
 		in6_dev->if_flags |= IF_RA_RCVD;
 	}
-
+#ifdef CONFIG_MTK_IPV6_VZW
+	/*add for VzW feature : remove IF_RS_VZW_SENT flag*/
+	if (in6_dev->if_flags & IF_RS_VZW_SENT)
+		in6_dev->if_flags &= ~IF_RS_VZW_SENT;
+#endif
 	/*
 	 * Remember the managed/otherconf flags from most recently
 	 * received RA message (RFC 2462) -- yoshfuji
@@ -1279,8 +1283,23 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 		rt->rt6i_flags = (rt->rt6i_flags & ~RTF_PREF_MASK) | RTF_PREF(pref);
 	}
 
-	if (rt)
-		rt6_set_expires(rt, jiffies + (HZ * lifetime));
+	if (rt) {
+		/*MTK changes
+		 *if route lifetime carried by RA msg equals to 0xFFFF,
+		 *considering it as infinite route lifetime and cleaning
+		 *route expires. Otherwise, setting route expires according
+		 *to the lifetime value.
+		 */
+		if (lifetime == 0xffff) {
+			rt6_clean_expires(rt);
+			pr_info("[mtk_net]RA: %s, rt %p, clean route expires since lifetime %d infinite\n",
+				__func__, rt, lifetime);
+		} else {
+			rt6_set_expires(rt, jiffies + (HZ * lifetime));
+			pr_info("[mtk_net]RA: %s, rt %p, set route expires since lifetime %d finite\n",
+				__func__, rt, lifetime);
+		}
+	}
 	if (in6_dev->cnf.accept_ra_min_hop_limit < 256 &&
 	    ra_msg->icmph.icmp6_hop_limit) {
 		if (in6_dev->cnf.accept_ra_min_hop_limit <= ra_msg->icmph.icmp6_hop_limit) {
@@ -1394,6 +1413,8 @@ skip_linkparms:
 #endif
 			if (ri->prefix_len == 0 &&
 			    !in6_dev->cnf.accept_ra_defrtr)
+				continue;
+			if (ri->prefix_len < in6_dev->cnf.accept_ra_rt_info_min_plen)
 				continue;
 			if (ri->prefix_len > in6_dev->cnf.accept_ra_rt_info_max_plen)
 				continue;

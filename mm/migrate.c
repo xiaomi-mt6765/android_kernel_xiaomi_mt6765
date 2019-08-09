@@ -2,6 +2,7 @@
  * Memory Migration functionality - linux/mm/migrate.c
  *
  * Copyright (C) 2006 Silicon Graphics, Inc., Christoph Lameter
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * Page migration was first developed in the context of the memory hotplug
  * project. The main authors of the migration code are:
@@ -241,7 +242,7 @@ static int remove_migration_pte(struct page *new, struct vm_area_struct *vma,
 
 	/* Recheck VMA as permissions can change since migration started  */
 	if (is_write_migration_entry(entry))
-		pte = maybe_mkwrite(pte, vma);
+		pte = maybe_mkwrite(pte, vma->vm_flags);
 
 #ifdef CONFIG_HUGETLB_PAGE
 	if (PageHuge(new)) {
