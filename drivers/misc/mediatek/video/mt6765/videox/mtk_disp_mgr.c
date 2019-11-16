@@ -1986,11 +1986,11 @@ static void mtk_disp_rgb_work(struct work_struct *work) {
         struct mtk_rgb_work_queue *rgb_wq = container_of(work, struct mtk_rgb_work_queue, work);
 	int r = mtk_disp_ld_r, g = mtk_disp_ld_g, b = mtk_disp_ld_b;
 	int i, gammutR, gammutG, gammutB, ret;
-	DISP_GAMMA_LUT_T *gamma;
+	struct DISP_GAMMA_LUT_T *gamma;
 
 	mutex_lock(&rgb_wq->lock);
 
-	gamma = kzalloc(sizeof(DISP_GAMMA_LUT_T), GFP_KERNEL);
+	gamma = kzalloc(sizeof(struct DISP_GAMMA_LUT_T), GFP_KERNEL);
 	gamma->hw_id = 0;
 	for (i = 0; i < 512; i++) {
 		gammutR = i * r / PROGRESSION_SCALE;

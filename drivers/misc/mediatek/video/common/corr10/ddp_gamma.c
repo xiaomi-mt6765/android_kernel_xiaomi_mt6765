@@ -272,7 +272,7 @@ static int disp_gamma_set_lut
 
 #ifdef CONFIG_MTK_VIDEOX_LIVEDISPLAY
 	if (virt_addr_valid(user_gamma_lut))
-		memcpy(gamma_lut, user_gamma_lut, sizeof(DISP_GAMMA_LUT_T));
+		memcpy(gamma_lut, user_gamma_lut, sizeof(struct DISP_GAMMA_LUT_T));
 	else
 #endif
 
