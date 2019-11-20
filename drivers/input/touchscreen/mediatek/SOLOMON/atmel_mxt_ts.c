@@ -713,7 +713,7 @@ struct mxt_data *mxt_i2c_data;
 
 
 #ifdef MAX1_WAKEUP_GESTURE_ENABLE
-#define GESTURE_NODE "onoff"
+#define GESTURE_NODE "double_tap_enable"
 #define GESTURE_DATA  "data"
 #define DOUBLE_CLICK 143
 #endif
@@ -974,7 +974,7 @@ static int gesture_init(struct input_dev *input_dev)
     struct proc_dir_entry *proc_data = NULL;
     struct proc_dir_entry *parent;
      
-    parent = proc_mkdir("gesture", NULL);
+    parent = proc_mkdir("touchpanel", NULL);
     if (!parent) {
         pr_err("%s: failed to create proc entry\n", __func__);
         return -ENOMEM;

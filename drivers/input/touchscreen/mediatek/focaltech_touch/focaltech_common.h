@@ -152,7 +152,7 @@ struct ts_ic_info {
 #endif
 
 #if FTS_GESTURE_EN
-#define GESTURE_NODE "onoff"
+#define GESTURE_NODE "double_tap_enable"
 #define GESTURE_DATA  "data"
 #define DOUBLE_CLICK 143
 struct gesture_struct

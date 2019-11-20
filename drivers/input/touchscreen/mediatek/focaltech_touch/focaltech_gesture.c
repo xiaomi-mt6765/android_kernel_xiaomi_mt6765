@@ -607,7 +607,7 @@ int gesture_init(struct input_dev *input_dev)
     struct proc_dir_entry *proc_data = NULL;
     struct proc_dir_entry *parent;
      
-    parent = proc_mkdir("gesture", NULL);
+    parent = proc_mkdir("touchpanel", NULL);
     if (!parent) {
         pr_err("%s: failed to create proc entry\n", __func__);
         return -ENOMEM;

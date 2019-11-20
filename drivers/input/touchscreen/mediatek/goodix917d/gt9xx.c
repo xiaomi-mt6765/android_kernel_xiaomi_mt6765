@@ -46,7 +46,7 @@
 #define MXT_INPUT_EVENT_EDGE_FINGER_HANDGRIP	9
 #define MXT_INPUT_EVENT_END			9
 #define DOUBLE_CLICK 143
-#define GESTURE_NODE "onoff"
+#define GESTURE_NODE "double_tap_enable"
 #define GESTURE_DATA  "data"
 
 //add by cassy begin
@@ -300,7 +300,7 @@ static int gesture_init(struct input_dev *input_dev)
     struct proc_dir_entry *proc_data = NULL;
     struct proc_dir_entry *parent;
      
-    parent = proc_mkdir("gesture", NULL);
+    parent = proc_mkdir("touchpanel", NULL);
     if (!parent) {
         pr_err("%s: failed to create proc entry\n", __func__);
         return -ENOMEM;
